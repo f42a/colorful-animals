@@ -1,0 +1,214 @@
+<!doctype html><html lang="ru"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="theme-color" content="#faf6ee"><title>colorful animals</title><style>
+  :root{
+    --paper:#FFFDF8;
+    --ink:#3B3629;
+    --sky1:#FBF3E7;
+    --sky2:#E7E3F5;
+    --ring:#3B3629;
+  }
+  *{ box-sizing:border-box; -webkit-tap-highlight-color: transparent; }
+  html,body{
+    margin:0; padding:0; height:100%; overflow:hidden;
+    background: linear-gradient(160deg, var(--sky1), var(--sky2));
+    font-family: -apple-system, sans-serif;
+    touch-action: manipulation;
+    user-select:none; -webkit-user-select:none;
+  }
+  .ambient{ position:fixed; inset:0; z-index:0; overflow:hidden; pointer-events:none; }
+  .blob{
+    position:absolute; border-radius:50%; filter: blur(30px); opacity:0.35;
+    animation: drift 22s ease-in-out infinite;
+  }
+  .blob.b1{ width:260px; height:260px; background:#B79CED; top:-60px; left:-60px; animation-duration:26s; }
+  .blob.b2{ width:220px; height:220px; background:#7EC8E3; bottom:-40px; right:-40px; animation-duration:30s; animation-delay:2s; }
+  .blob.b3{ width:180px; height:180px; background:#F5D76E; top:40%; right:10%; animation-duration:24s; animation-delay:4s; }
+  .blob.b4{ width:150px; height:150px; background:#8FD9B6; bottom:20%; left:8%; animation-duration:28s; animation-delay:1s; }
+  @keyframes drift{
+    0%,100%{ transform:translate(0,0) scale(1); }
+    33%{ transform:translate(30px,-20px) scale(1.08); }
+    66%{ transform:translate(-20px,25px) scale(0.95); }
+  }
+
+  .app{
+    position:relative; z-index:1; height:100%;
+    display:flex; flex-direction:column; align-items:center; justify-content:center;
+    padding: clamp(8px, 2.5vw, 18px);
+    padding-top: calc(env(safe-area-inset-top, 0px) + clamp(8px, 2.5vw, 18px));
+    padding-bottom: calc(env(safe-area-inset-bottom, 0px) + clamp(8px, 2.5vw, 18px));
+    padding-left: calc(env(safe-area-inset-left, 0px) + clamp(8px, 2.5vw, 18px));
+    padding-right: calc(env(safe-area-inset-right, 0px) + clamp(8px, 2.5vw, 18px));
+  }
+
+  .stage-row{
+    position:relative; width:100%; max-width:800px;
+    display:flex; align-items:center; justify-content:center;
+    gap: clamp(8px, 3vw, 18px);
+    flex:1; min-height:0;
+  }
+
+  .canvas-wrap{
+    width:min(560px, 60vh, 66vw);
+    aspect-ratio: 1/1;
+    display:flex; align-items:center; justify-content:center;
+    transition: opacity .28s ease, transform .28s ease;
+    position:relative;
+    flex: 0 1 auto;
+  }
+  .canvas-wrap.switching{ opacity:0; transform:scale(0.92); }
+  .canvas-wrap.tapped{ animation: pop .3s ease; }
+  @keyframes pop{
+    0%{ transform:scale(1); }
+    35%{ transform:scale(1.025); }
+    100%{ transform:scale(1); }
+  }
+
+  canvas{ width:100%; height:100%; cursor:pointer; touch-action: none; -webkit-user-select:none; user-select:none; filter: drop-shadow(0 14px 22px rgba(59,54,41,0.16)); }
+
+  .loading{
+    position:absolute; inset:0; display:flex; align-items:center; justify-content:center;
+    z-index:4; color: var(--ink); opacity:0.5; font-size:14px;
+    transition: opacity .3s ease;
+  }
+  .loading.hidden{ opacity:0; pointer-events:none; }
+
+  .nav-btn{
+    flex: 0 0 auto;
+    width:clamp(44px, 11vw, 64px); height:clamp(44px, 11vw, 64px); border-radius:50%; border:4px solid #fff;
+    background: #B79CED;
+    display:flex; align-items:center; justify-content:center;
+    box-shadow: 0 5px 0 rgba(59,54,41,0.18), 0 8px 16px rgba(59,54,41,0.22);
+    z-index:2; padding:0;
+    transition: transform .12s ease, box-shadow .12s ease;
+  }
+  .nav-btn:active{
+    transform: translateY(3px) scale(0.96);
+    box-shadow: 0 2px 0 rgba(59,54,41,0.18), 0 3px 8px rgba(59,54,41,0.2);
+  }
+  .nav-btn svg{ width:44%; height:44%; }
+
+  .palette{
+    display:flex; gap:clamp(6px, 2vw, 14px); align-items:center; justify-content:center;
+    padding: clamp(8px, 2vw, 12px) clamp(10px, 2.5vw, 16px); margin-top:6px;
+    background: rgba(255,253,248,0.6); backdrop-filter: blur(6px);
+    border-radius: 44px;
+    box-shadow: 0 6px 20px rgba(59,54,41,0.12);
+    max-width: 96vw;
+  }
+  .swatch{
+    width:clamp(34px, 8vw, 50px); height:clamp(34px, 8vw, 50px); border-radius:50%; border:4px solid #fff;
+    box-shadow: 0 4px 0 rgba(59,54,41,0.15), 0 5px 10px rgba(59,54,41,0.22);
+    padding:0; transition: transform .15s ease, box-shadow .15s ease; flex: 0 0 auto;
+  }
+  .swatch.selected{
+    transform: scale(1.12);
+    box-shadow: 0 0 0 4px var(--ring), 0 5px 10px rgba(59,54,41,0.3);
+  }
+  .swatch:active{ transform: scale(0.94); }
+
+  .icon-btn{
+    position:fixed; width:clamp(42px, 10vw, 54px); height:clamp(42px, 10vw, 54px); border-radius:50%; border:4px solid #fff;
+    top: calc(env(safe-area-inset-top, 0px) + clamp(10px, 2.5vw, 16px));
+    display:flex; align-items:center; justify-content:center;
+    box-shadow: 0 5px 0 rgba(59,54,41,0.18), 0 7px 14px rgba(59,54,41,0.22);
+    z-index:3; padding:0;
+    transition: transform .12s ease, box-shadow .12s ease;
+  }
+  .icon-btn:active{
+    transform: translateY(3px) scale(0.96);
+    box-shadow: 0 2px 0 rgba(59,54,41,0.18), 0 3px 8px rgba(59,54,41,0.2);
+  }
+  .icon-btn svg{ width:44%; height:44%; }
+  .reset-btn{ left: calc(env(safe-area-inset-left, 0px) + 14px); background:#8FD9B6; }
+  .sound-btn{ right: calc(env(safe-area-inset-right, 0px) + 14px); background:#7EC8E3; }
+
+  .sparkle{
+    position:fixed; border-radius:50%; pointer-events:none; z-index:5;
+  }
+
+  .dots{
+    display:flex; gap:7px; margin-top:12px;
+  }
+  .dot{ width:7px; height:7px; border-radius:50%; background: var(--ink); opacity:0.25; }
+  .dot.active{ opacity:0.7; }
+
+html,body{height:100%;height:100dvh;background:#faf6ee} .ambient{background:linear-gradient(155deg,#fbf3e7,#ece8f3)}
+.app{padding-top:max(76px,env(safe-area-inset-top));padding-bottom:max(18px,env(safe-area-inset-bottom));gap:10px}
+.canvas-wrap{width:min(650px,72vh,76vw)} canvas{filter:none;position:relative;z-index:1}
+.stage-row{max-width:960px}.nav-btn:disabled{opacity:.28;box-shadow:none}.nav-right.ready{background:#8fd9b6;animation:ready 1.4s ease-in-out infinite}
+@keyframes ready{50%{transform:scale(1.12)}}
+.palette{background:none;box-shadow:none;backdrop-filter:none;flex-wrap:wrap;gap:14px;padding:12px}.swatch{width:48px;height:48px}
+.progress{width:150px;height:13px;border:3px solid white;border-radius:20px;background:#ded9cf;position:relative;box-shadow:0 2px 0 #3b36291c}.progress>div{height:100%;width:0;background:#8fd9b6;border-radius:20px;transition:width .35s}
+.dots{margin:1px;gap:6px}.dot.done{background:#75bfa0;opacity:1}.dot.active{transform:scale(1.5)}
+#scenery{position:absolute;inset:0;width:100%;height:100%;opacity:.075;pointer-events:none;z-index:0}
+.start{position:fixed;inset:0;z-index:10;display:flex;flex-direction:column;align-items:center;justify-content:center;background:linear-gradient(155deg,#fbf3e7,#ece8f3);gap:22px;padding:24px}.start[hidden]{display:none}.start h1{font-family:ui-rounded,'Arial Rounded MT Bold',sans-serif;font-weight:900;letter-spacing:-2px;font-size:clamp(36px,8vw,64px);margin:0;color:#3b3629;text-shadow:0 3px white;transform:rotate(-3deg)}.start h1 span:nth-child(2n){color:#a990cf}.start h1 span:nth-child(3n){color:#73b7ce}.start img{width:min(65vw,330px);height:min(65vw,330px);object-fit:contain;mix-blend-mode:multiply;transform:rotate(3deg)}
+.go{font:900 36px ui-rounded,'Arial Rounded MT Bold',sans-serif;color:white;background:#8fd9b6;border:5px solid white;border-radius:40% 45% 42% 42%;padding:13px 60px;box-shadow:0 7px 0 #6fae92,0 12px 20px #3b36291c;cursor:pointer}.go:active{transform:translateY(4px);box-shadow:0 3px 0 #6fae92}button{cursor:pointer}button:focus-visible{outline:3px solid #3b3629;outline-offset:6px}
+@media(max-width:600px){.stage-row{width:100%;}.canvas-wrap{width:100%;max-height:calc(100dvh - 285px);aspect-ratio:1;flex:none;max-width:calc(100dvh - 285px)}.nav-btn{position:absolute;bottom:-10px;width:48px;height:48px}.nav-left{left:8px}.nav-right{right:8px}.palette{max-width:350px;gap:12px}.swatch{width:46px;height:46px}.app{gap:14px}.progress{margin-top:16px}}
+@media(max-height:500px) and (orientation:landscape){.app{padding:10px 80px}.stage-row{max-width:650px}.canvas-wrap{width:min(58vh,55vw);max-height:none}.palette{position:fixed;right:15px;top:65px;bottom:10px;width:55px;gap:8px;padding:0;align-content:center}.swatch{width:36px;height:36px}.dots{display:none}.progress{margin:0}.start{gap:6px}.start img{width:42vh;height:42vh}.start h1{font-size:32px}.go{font-size:24px;padding:8px 40px}}
+@media(prefers-reduced-motion:reduce){*,*:before,*:after{animation:none!important;transition:none!important}}
+
+.start h1{display:flex;flex-direction:column;gap:0;align-items:center;letter-spacing:-1px;font-size:clamp(44px,11vw,72px);line-height:1.03;transform:none;text-shadow:0 2px 0 white;margin-bottom:0}
+.start h1 .word{display:flex;align-items:baseline;justify-content:center;white-space:nowrap;color:inherit}
+.start h1 .word>span{display:inline-block;color:var(--letter);transform:rotate(var(--tilt));font-weight:900;-webkit-text-stroke:.5px currentColor}
+.start{gap:20px}.start img{width:min(60vw,290px);height:min(60vw,290px)}
+@media(max-height:500px) and (orientation:landscape){.start h1{font-size:36px;flex-direction:row;gap:12px}.start{gap:8px}.start img{width:39vh;height:39vh}}
+.sound-btn{z-index:11}body:not(.playing) .reset-btn{visibility:hidden}
+
+.go{transition:background-color .18s,color .18s,transform .14s,box-shadow .14s}
+.nav-btn{--button-color:#B79CED}.nav-btn.ready,.reset-btn{--button-color:#8FD9B6}.sound-btn{--button-color:#7EC8E3}
+.icon-btn,.nav-btn{transition:background-color .18s,transform .14s,box-shadow .14s}
+.icon-btn path,.nav-btn path{transition:stroke .18s,fill .18s}
+@media(hover:hover) and (pointer:fine){
+ .go:hover{background:#fff;color:#78bea0;transform:translateY(-2px);box-shadow:0 9px 0 #6fae92,0 14px 22px #3b36291c}
+ .icon-btn:hover,.nav-btn:not(:disabled):hover{background:white;transform:translateY(-2px)}
+ .icon-btn:hover path[stroke],.nav-btn:not(:disabled):hover path[stroke]{stroke:var(--button-color)}
+ .icon-btn:hover path[fill]{fill:var(--button-color)}
+ .swatch:hover{transform:translateY(-3px) scale(1.06)}
+ .swatch.selected:hover{transform:translateY(-3px) scale(1.12)}
+}
+.go:active{background:white;color:#78bea0;transform:translateY(4px);box-shadow:0 3px 0 #6fae92}
+.icon-btn:active,.nav-btn:not(:disabled):active{background:white;transform:translateY(3px) scale(.96)}
+.icon-btn:active path[stroke],.nav-btn:not(:disabled):active path[stroke]{stroke:var(--button-color)}
+.icon-btn:active path[fill]{fill:var(--button-color)}
+
+.swatch.color-blocked{opacity:.3;transform:scale(.9);box-shadow:0 2px 0 rgba(59,54,41,.12);cursor:default}
+.swatch.choose-color{animation:choose-color .65s ease-in-out 3}
+@keyframes choose-color{0%,100%{transform:rotate(0)}25%{transform:rotate(-9deg) translateY(-3px)}75%{transform:rotate(9deg) translateY(-3px)}}
+@media(hover:hover) and (pointer:fine){.swatch.color-blocked:hover{transform:scale(.9)}}
+</style></head><body>
+
+<div class="ambient">
+  <div class="blob b1"></div>
+  <div class="blob b2"></div>
+  <div class="blob b3"></div>
+  <div class="blob b4"></div>
+</div>
+
+<button class="icon-btn reset-btn" id="resetBtn" aria-label="reset">
+  <svg viewBox="0 0 24 24" fill="none"><path d="M3 12a9 9 0 1 1 3 6.7" stroke="#fff" stroke-width="2.8" stroke-linecap="round"/><path d="M3 21v-6h6" stroke="#fff" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+</button>
+<button class="icon-btn sound-btn" id="soundBtn" aria-label="sound">
+  <svg id="soundIcon" viewBox="0 0 24 24" fill="none"><path d="M4 9v6h4l5 4V5L8 9H4z" fill="#fff"/><path id="waveIcon" d="M16.5 8.5a5 5 0 0 1 0 7" stroke="#fff" stroke-width="2.8" stroke-linecap="round"/><path id="muteSlashIcon" d="M4 4 L21 21" stroke="#fff" stroke-width="2.8" stroke-linecap="round" style="display:none"/></svg>
+</button>
+
+<div class="app" id="game" inert>
+  <div class="stage-row">
+    <button class="nav-btn nav-left" id="prevBtn" aria-label="prev">
+      <svg viewBox="0 0 24 24" fill="none"><path d="M15 5l-7 7 7 7" stroke="#fff" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    </button>
+
+    <div class="canvas-wrap" id="canvasWrap">
+      <svg id="scenery" viewBox="0 0 600 600" fill="none" stroke="#3b3629" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"></svg><canvas id="artCanvas" width="1200" height="1200"></canvas>
+      <div class="loading" id="loadingEl">···</div>
+    </div>
+
+    <button class="nav-btn nav-right" id="nextBtn" aria-label="next">
+      <svg viewBox="0 0 24 24" fill="none"><path d="M9 5l7 7-7 7" stroke="#fff" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    </button>
+  </div>
+
+  <div class="progress" role="progressbar" aria-label="Раскрашено" aria-valuemin="0" aria-valuemax="100"><div id="progressFill"></div></div><div class="dots" id="dots"></div>
+
+  <div class="palette" id="palette"></div>
+</div>
+
+<section class="start" id="start"><h1 aria-label="colorful animals"><span class="word"><span style="--letter:#7EC8E3;font-family:'Arial Rounded MT Bold',sans-serif;--tilt:-5deg">c</span><span style="--letter:#F5D76E;font-family:'Chalkboard SE',sans-serif;--tilt:3deg">o</span><span style="--letter:#F2967D;font-family:'Georgia',serif;--tilt:-2deg">l</span><span style="--letter:#8FD9B6;font-family:'Trebuchet MS',sans-serif;--tilt:4deg">o</span><span style="--letter:#B79CED;font-family:'Courier New',sans-serif;--tilt:-3deg">r</span><span style="--letter:#F4A6C6;font-family:'Verdana',sans-serif;--tilt:2deg">f</span><span style="--letter:#F4A259;font-family:'Cochin',serif;--tilt:0deg">u</span><span style="--letter:#7EC8E3;font-family:'Gill Sans',sans-serif;--tilt:-5deg">l</span></span><span class="word"><span style="--letter:#F5D76E;font-family:'American Typewriter',serif;--tilt:3deg">a</span><span style="--letter:#F2967D;font-family:'Baskerville',serif;--tilt:-2deg">n</span><span style="--letter:#8FD9B6;font-family:'Avenir Next',sans-serif;--tilt:4deg">i</span><span style="--letter:#B79CED;font-family:'Comic Sans MS',sans-serif;--tilt:-3deg">m</span><span style="--letter:#F4A6C6;font-family:'Futura',sans-serif;--tilt:2deg">a</span><span style="--letter:#F4A259;font-family:'Optima',sans-serif;--tilt:0deg">l</span><span style="--letter:#7EC8E3;font-family:'Palatino',serif;--tilt:-5deg">s</span></span></h1><img src="assets/animal-0.png" alt=""><button class="go" id="go">Go</button></section><script src="game.js"></script></body></html>
