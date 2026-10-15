@@ -88,19 +88,19 @@ updatePalette();
 $('prevBtn').onclick=()=>!busy&&show(current-1);$('nextBtn').onclick=()=>!busy&&show(current+1);
 $('resetBtn').onclick=()=>{if(busy||!state)return;state.colors={};paintings[current]={};delete colorRuns[current];if(selected<0)selected=0;updatePalette();render();save()};
 $('resetBtn').setAttribute('aria-label','Раскрасить заново');$('prevBtn').setAttribute('aria-label','Предыдущее животное');$('nextBtn').setAttribute('aria-label','Следующее животное');
-$('go').onclick=()=>{foreground=!document.hidden;started=true;document.body.classList.add('playing');$('start').hidden=true;$('game').inert=false;audio();if(ac?.state==='suspended')ac.resume();show(current)};
+$('go').onclick=()=>{foreground=!document.hidden;started=true;document.body.classList.add('playing');$('start').hidden=true;$('game').inert=false;audio();restoreAudio();show(current)};
 function sparkles(x,y){if(matchMedia('(prefers-reduced-motion: reduce)').matches)return;for(let i=0;i<8;i++){const dot=document.createElement('span');dot.className='sparkle';dot.style.cssText=`left:${x}px;top:${y}px;background:${COLORS[i%7]};width:8px;height:8px`;document.body.append(dot);dot.animate([{transform:'translate(0,0)',opacity:1},{transform:`translate(${Math.cos(i)*55}px,${Math.sin(i)*55-25}px)`,opacity:0}],{duration:650,easing:'ease-out'}).onfinish=()=>dot.remove()}}
 function celebrate(){const r=canvas.getBoundingClientRect();sparkles(r.left+r.width/2,r.top+r.height/3);if(ac)[0,2,4].forEach((n,i)=>setTimeout(()=>chime(n),i*150))}
 // A quiet consonant lullaby, filtered before both dry and reverberant paths.
 let ac,master,timer,step=0,foreground=!document.hidden;const notes=[261.63,329.63,392,329.63,293.66,349.23,440,349.23,261.63,329.63,392,523.25,349.23,329.63,293.66,261.63];
-function audio(){if(ac)return;try{ac=new(window.AudioContext||window.webkitAudioContext)();master=ac.createGain();master.gain.value=muted?0:.55;const low=ac.createBiquadFilter();low.type='lowpass';low.frequency.value=1700;low.Q.value=.45;master.connect(low);const dry=ac.createGain();dry.gain.value=.75;low.connect(dry);dry.connect(ac.destination);const reverb=ac.createConvolver(),length=ac.sampleRate*2.8,buffer=ac.createBuffer(2,length,ac.sampleRate);for(let ch=0;ch<2;ch++){const d=buffer.getChannelData(ch);let last=0;for(let i=0;i<length;i++){last=.75*last+.25*(Math.random()*2-1);d[i]=last*Math.pow(1-i/length,2.2)}}reverb.buffer=buffer;const wet=ac.createGain();wet.gain.value=.32;low.connect(reverb);reverb.connect(wet);wet.connect(ac.destination);ambient()}catch{}}
-function tone(freq,duration=2.8,volume=.045,attack=.12){if(!ac||muted||document.hidden||!foreground)return;const t=ac.currentTime,o=ac.createOscillator(),g=ac.createGain();o.type='sine';o.frequency.value=freq;g.gain.setValueAtTime(.0001,t);g.gain.exponentialRampToValueAtTime(volume,t+attack);g.gain.exponentialRampToValueAtTime(.0001,t+duration);o.connect(g);g.connect(master);o.start();o.stop(t+duration+.1);o.onended=()=>{o.disconnect();g.disconnect()}}
+function audio(){if(ac)return;try{if(typeof navigator!=='undefined'&&navigator.audioSession){try{navigator.audioSession.type='playback'}catch{}}ac=new(window.AudioContext||window.webkitAudioContext)();ac.onstatechange=()=>{if(ac.state==='running'&&foreground&&!document.hidden)ambient()};master=ac.createGain();master.gain.value=muted?0:.55;const low=ac.createBiquadFilter();low.type='lowpass';low.frequency.value=1700;low.Q.value=.45;master.connect(low);const dry=ac.createGain();dry.gain.value=.75;low.connect(dry);dry.connect(ac.destination);const reverb=ac.createConvolver(),length=ac.sampleRate*2.8,buffer=ac.createBuffer(2,length,ac.sampleRate);for(let ch=0;ch<2;ch++){const d=buffer.getChannelData(ch);let last=0;for(let i=0;i<length;i++){last=.75*last+.25*(Math.random()*2-1);d[i]=last*Math.pow(1-i/length,2.2)}}reverb.buffer=buffer;const wet=ac.createGain();wet.gain.value=.32;low.connect(reverb);reverb.connect(wet);wet.connect(ac.destination);ambient()}catch{}}
+function tone(freq,duration=2.8,volume=.045,attack=.12){if(!ac||ac.state!=='running'||muted||document.hidden||!foreground)return;const t=ac.currentTime,o=ac.createOscillator(),g=ac.createGain();o.type='sine';o.frequency.value=freq;g.gain.setValueAtTime(.0001,t);g.gain.exponentialRampToValueAtTime(volume,t+attack);g.gain.exponentialRampToValueAtTime(.0001,t+duration);o.connect(g);g.connect(master);o.start();o.stop(t+duration+.1);o.onended=()=>{o.disconnect();g.disconnect()}}
 function ambient(){clearTimeout(timer);if(document.hidden||!foreground)return;if(started&&!muted){tone(notes[step%16],3.8,.045,.6);if(step%4===0)tone([130.81,146.83,130.81,174.61][Math.floor(step%16/4)],5,.035,.9);step++}timer=setTimeout(ambient,1900)}
 function chime(i){tone([523.25,587.33,659.25,783.99,880,1046.5,1174.66][i],1.3,.08,.035)}
 function soundUI(){$('waveIcon').style.display=muted?'none':'block';$('muteSlashIcon').style.display=muted?'block':'none';$('soundBtn').setAttribute('aria-label',muted?'Включить звук':'Выключить звук');$('soundBtn').setAttribute('aria-pressed',!muted)}
-$('soundBtn').onclick=()=>{audio();muted=!muted;if(master)master.gain.setTargetAtTime(muted?0:.55,ac.currentTime,.12);if(ac?.state==='suspended')ac.resume();soundUI();save()};soundUI();
+$('soundBtn').onclick=()=>{muted=!muted;audio();if(master)master.gain.setTargetAtTime(muted?0:.55,ac.currentTime,.12);restoreAudio();soundUI();save()};soundUI();
 function pauseAudio(){foreground=false;clearTimeout(timer);if(ac&&ac.state!=='closed')ac.suspend().catch(()=>{});}
-function restoreAudio(){foreground=!document.hidden;if(!foreground||!ac||!started)return;ac.resume().then(()=>{if(!foreground||document.hidden){pauseAudio();return}ambient()}).catch(()=>{});}
+function restoreAudio(){foreground=!document.hidden;if(!foreground||!ac||ac.state==='closed')return;if(ac.state==='running'){ambient();return}ac.resume().then(()=>{if(!foreground||document.hidden){pauseAudio();return}ambient()}).catch(()=>{});}
 document.addEventListener('visibilitychange',()=>document.hidden?pauseAudio():restoreAudio());
 window.addEventListener('pagehide',pauseAudio);
 window.addEventListener('pageshow',restoreAudio);
@@ -108,3 +108,9 @@ window.addEventListener('blur',pauseAudio);
 window.addEventListener('focus',restoreAudio);
 document.addEventListener('freeze',pauseAudio);
 document.addEventListener('resume',restoreAudio);
+
+// Retry blocked or interrupted mobile audio within a real user gesture.
+function unlockAudio(){if(ac&&!muted&&!document.hidden&&(ac.state!=='running'||!foreground))restoreAudio()}
+document.addEventListener('touchend',unlockAudio,{passive:true});
+document.addEventListener('pointerup',unlockAudio,{passive:true});
+document.addEventListener('keydown',unlockAudio);
