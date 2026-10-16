@@ -6,26 +6,14 @@ canvas.width=canvas.height=S;
 let saved;try{saved=JSON.parse(localStorage.getItem('coloranimals-v1'))}catch{};
 let paintings=saved?.paintings||{}, unlocked=Math.min(12,Math.max(0,saved?.unlocked||0)), current=Math.min(unlocked,saved?.current||0), selected=0, started=false, busy=true, muted=!!saved?.muted;
 if(saved?.artVersion!==2){delete paintings[10];delete paintings[11];delete paintings[12];}
-const colorRuns=saved?.colorRuns||{};
 const cache=new Map();let state=null,request=0;
-function save(){try{localStorage.setItem('coloranimals-v1',JSON.stringify({paintings,unlocked,current,muted,colorRuns,artVersion:2}))}catch{}}
-// Only first-time fills count; each animal keeps its own streak.
-function blockedColor(){const run=colorRuns[current];return run?.count>=2?run.color:-1;}
+function save(){try{localStorage.setItem('coloranimals-v1',JSON.stringify({paintings,unlocked,current,muted,artVersion:2}))}catch{}}
 function updatePalette(){
- const blocked=blockedColor();
- if(selected===blocked&&blocked!==-1)selected=-1;
  document.querySelectorAll('.swatch').forEach((el,i)=>{
-  el.disabled=i===blocked;
+  el.disabled=false;
   el.classList.toggle('selected',i===selected);
-  el.classList.toggle('color-blocked',i===blocked);
-  el.classList.toggle('choose-color',blocked!==-1&&selected===-1&&i!==blocked);
   el.setAttribute('aria-pressed',String(i===selected));
  });
-}
-function recordNewFill(color){
- const run=colorRuns[current];
- colorRuns[current]={color,count:run?.color===color?Math.min(2,run.count+1):1};
- updatePalette();
 }
 // Connected white regions are computed once. The exterior is never paintable.
 async function prepare(index){
@@ -70,23 +58,22 @@ const scenes={
 };
 const habitats=['home','home','savanna','farm','pond','jungle','jungle','savanna','pond','savanna','savanna','pond','savanna'];
 async function show(index){if(index<0||index>unlocked||index>=13)return;const token=++request;busy=true;current=index;state=null;$('loadingEl').classList.remove('hidden');$('nextBtn').disabled=$('prevBtn').disabled=true;$('canvasWrap').classList.add('switching');
- try{const result=await prepare(index);if(token!==request)return;state=result;busy=false;if(selected<0&&blockedColor()===-1)selected=0;updatePalette();$('scenery').innerHTML=`<path d="${scenes[habitats[index]]}"/>`;render();save();$('loadingEl').classList.add('hidden');$('canvasWrap').classList.remove('switching');}
+ try{const result=await prepare(index);if(token!==request)return;state=result;busy=false;if(selected<0)selected=0;updatePalette();$('scenery').innerHTML=`<path d="${scenes[habitats[index]]}"/>`;render();save();$('loadingEl').classList.add('hidden');$('canvasWrap').classList.remove('switching');}
  catch(err){$('loadingEl').textContent='↻';$('loadingEl').onclick=()=>show(index);console.error(err)}
 }
-function paint(e){if(!started||busy||!state||e.button>0||selected<0||selected===blockedColor())return;e.preventDefault();const box=canvas.getBoundingClientRect(),x=Math.floor((e.clientX-box.left)*S/box.width),y=Math.floor((e.clientY-box.top)*S/box.height);if(x<0||y<0||x>=S||y>=S)return;let id=state.labels[y*S+x];
+function paint(e){if(!started||busy||!state||e.button>0||selected<0)return;e.preventDefault();const box=canvas.getBoundingClientRect(),x=Math.floor((e.clientX-box.left)*S/box.width),y=Math.floor((e.clientY-box.top)*S/box.height);if(x<0||y<0||x>=S||y>=S)return;let id=state.labels[y*S+x];
  if(!state.regions[id]?.paintable){let nearest=Infinity;const radius=Math.ceil(S/box.width*9);for(let dy=-radius;dy<=radius;dy++)for(let dx=-radius;dx<=radius;dx++){const xx=x+dx,yy=y+dy;if(xx<0||xx>=S||yy<0||yy>=S)continue;const other=state.labels[yy*S+xx],dist=dx*dx+dy*dy;if(state.regions[other]?.paintable&&dist<nearest){id=other;nearest=dist}}}
  if(!state.regions[id]?.paintable||state.colors[id]===COLORS[selected])return;
- const usedColor=selected,isNew=!state.colors[id];
+ const usedColor=selected;
  state.colors[id]=COLORS[usedColor];paintings[current]=state.colors;
- if(isNew)recordNewFill(usedColor);
  render();save();chime(usedColor);sparkles(e.clientX,e.clientY);
 }
 canvas.addEventListener('pointerdown',paint,{passive:false});
 $('palette').innerHTML=COLORS.map((c,i)=>`<button class="swatch ${i===0?'selected':''}" style="background:${c}" aria-label="${['Голубой','Жёлтый','Коралловый','Зелёный','Сиреневый','Розовый','Оранжевый'][i]}" aria-pressed="${i===0}" data-color="${i}"></button>`).join('');
-$('palette').onclick=e=>{const b=e.target.closest('[data-color]');if(!b||b.disabled||+b.dataset.color===blockedColor())return;selected=+b.dataset.color;updatePalette()};
+$('palette').onclick=e=>{const b=e.target.closest('[data-color]');if(!b||b.disabled)return;selected=+b.dataset.color;updatePalette()};
 updatePalette();
 $('prevBtn').onclick=()=>!busy&&show(current-1);$('nextBtn').onclick=()=>!busy&&show(current+1);
-$('resetBtn').onclick=()=>{if(busy||!state)return;state.colors={};paintings[current]={};delete colorRuns[current];if(selected<0)selected=0;updatePalette();render();save()};
+$('resetBtn').onclick=()=>{if(busy||!state)return;state.colors={};paintings[current]={};if(selected<0)selected=0;updatePalette();render();save()};
 $('resetBtn').setAttribute('aria-label','Раскрасить заново');$('prevBtn').setAttribute('aria-label','Предыдущее животное');$('nextBtn').setAttribute('aria-label','Следующее животное');
 $('go').onclick=()=>{foreground=!document.hidden;started=true;document.body.classList.add('playing');$('start').hidden=true;$('game').inert=false;audio();restoreAudio();show(current)};
 function sparkles(x,y){if(matchMedia('(prefers-reduced-motion: reduce)').matches)return;for(let i=0;i<8;i++){const dot=document.createElement('span');dot.className='sparkle';dot.style.cssText=`left:${x}px;top:${y}px;background:${COLORS[i%7]};width:8px;height:8px`;document.body.append(dot);dot.animate([{transform:'translate(0,0)',opacity:1},{transform:`translate(${Math.cos(i)*55}px,${Math.sin(i)*55-25}px)`,opacity:0}],{duration:650,easing:'ease-out'}).onfinish=()=>dot.remove()}}
